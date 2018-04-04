@@ -1,0 +1,36 @@
+
+# 视频合成
+
+ffmpeg -f concat -safe 0 -protocol_whitelist "file,http,https,tcp,tls" -i list.txt
+
+ffmpeg -i "111.png" \
+-f concat -safe 0 -protocol_whitelist "file,http,https,tcp,tls" -i girls.txt \
+-f concat -safe 0 -protocol_whitelist "file,http,https,tcp,tls" -i girls.txt \
+
+ffmpeg -i "111.png" \
+-i input1.mp4 -i mygirl.mp4 \
+
+-filter_complex "\
+[0:v]scale=w=640:h=-2[baseimg]; \
+[1:v]scale=w=320:h=-2,pad=0:0:0:0[l1one];[baseimg][l1one]overlay=x=0:y=0[joinpoint1]; \
+[2:v]scale=w=320:h=-2,pad=0:0:0:0[l1two];[joinpoint1][l1two]overlay=x=320:y=0[layer1]; \
+[0:v]scale=320:-2[baseimg];[layer1][baseimg]overlay=0:-overlay_h[joinpoint4]; \
+[1:v]scale=w=320:h=-2[l2one];[joinpoint4][l2one]overlay=x=0:y=-overlay_h[joinpoint5]; \
+[2:v]scale=w=320:h=-2[l2two];[joinpoint5][l2two]overlay=x=0:y=-overlay_h[out]" -map [out] \
+-filter_complex "[1:a]volume=volume=1[audio0];[2:a]volume=volume=1[audio1];[audio0][audio1]amix=inputs=2:duration=first:dropout_transition=2[aout]" -map [aout] \
+-force_key_frames "expr:gte(t,n_forced*5)" -c:v h264 -c:a aac -bufsize 2560k -qscale 0.01 -f flv synthesis.mp4
+
+ffmpeg -i "111.png" \
+-i mygirl.mp4 -i mygirl.mp4 -i mygirl.mp4 -i mygirl.mp4 \
+-filter_complex "\
+[0:v]scale=w=640:h=-2[baseimg]; \
+[1:v]scale=w=320:h=-2,pad=0:0:0:0[l1one];[baseimg][l1one]overlay=x=0:y=0[joinpoint1]; \
+[2:v]scale=w=320:h=-2,pad=0:0:0:0[l1two];[joinpoint1][l1two]overlay=x=320:y=0[joinpoint2]; \
+[3:v]scale=w=320:h=-2,pad=0:0:0:0[l1three];[joinpoint2][l1three]overlay=x=0:y=H-overlay_h[joinpoint3]; \
+[4:v]scale=w=320:h=-2,pad=0:0:0:0[l1four];[joinpoint3][l1four]overlay=x=W-overlay_w:y=H-overlay_h \
+[out]" -map [out] \
+-filter_complex " \
+[1:a]volume=volume=1[audio0];[2:a]volume=volume=1[audio1];[3:a]volume=volume=1[audio2];[4:a]volume=volume=1[audio3]; \
+[audio0][audio1][audio2][audio3]amix=inputs=4:duration=first:dropout_transition=2 \
+[aout]" -map [aout] \
+-force_key_frames "expr:gte(t,n_forced*5)" -c:v h264 -c:a aac -bufsize 2560k -qscale 0.01 synthesis.mp4
