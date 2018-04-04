@@ -1,0 +1,10 @@
+# Created by .ignore support plugin (hsz.mobi)
+/fcli.config
+/input1.mp4
+/input2.mp4
+/temp.mp4
+.fcli/
+.idea/
+couponencrypt.iml
+lib/
+target/

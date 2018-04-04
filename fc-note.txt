@@ -1,0 +1,27 @@
+
+# 新建函数计算命令
+mkf ffmpeg-fc -h vlink.VideoLink::handleRequest --runtime java8 -d ./classes/
+# 更新函数计算命令
+upf ffmpeg-fc -h vlink.VideoLink::handleRequest --runtime java8 -d ./classes/
+
+# API网关 POST调用
+https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/input.mp4
+https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/music.mp3
+POST 地址: https://apis.umaman.com/ffmpeg/vlink
+POST 参数:
+{
+  "mp4": [
+    "https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/input.mp4",
+    "https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/input.mp4"
+  ],
+  "mp3": "https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/bg_music.mp3",
+  "wait": true, // 是否等待
+  "seconds": 30, // 等待时间,单位 s
+  "clean": true // 是否清除生成的MP3,MP4文件
+}
+
+# 相关ffmpeg命令
+1. 将视频声音调为0拼接成新视频
+ffmpeg -f concat -safe 0 -protocol_whitelist "file,http,https,tcp,tls" -i list.txt -filter_complex '[0:v]pad=0:0:0:0[vout]' -map [vout] -filter_complex "[0:a]volume=volume=0[aout]" -map [aout] temp.mp4
+2+.视频与音频合并时音频循环
+ffmpeg -i temp.mp4 -f lavfi -i amovie='tmp/music.mp3':loop=55 -filter_complex amix=inputs=2:duration=first output.mp4
