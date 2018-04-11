@@ -1,10 +1,9 @@
-package service;
+package fmpeg;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
-import com.aliyun.fc.runtime.Context;
-import com.aliyun.fc.runtime.StreamRequestHandler;
+import com.aliyun.fc.runtime.FunctionComputeLogger;
 import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.model.PutObjectResult;
 import utils.FCUtils;
@@ -13,24 +12,14 @@ import utils.MD5;
 import utils.OSSUtil;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 /**
- * 视频拼接函数
- *
- * <pre>
- *     mkf service-pinjie -h service.PinjieService::handleRequest --runtime java8 -d ./classes/
- *     upf service-pinjie -h service.PinjieService::handleRequest --runtime java8 -d ./classes/
- *     invk service-pinjie -s {\"mp4\":[\"https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/input2.mp4\",\"https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/input2.mp4\"],\"mp3\":\"https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/bg_music.mp3\",\"outfileName\":\"22f2bbcade060569621b25339d57f2b5_out\"}
- * </pre>
- *
+ * 视频拼接
  * @author Eric
- * @since 2018/4/4 9:59
+ * @since 2018/4/8 10:01
  *     <p>Created by IntelliJ IDEA.
  */
-public class PinjieService implements StreamRequestHandler {
+public class PinjieService implements FfmpegService {
 
     /**
      * 视频拼接, %1$s 连接内容文件 %2$s temp视频文件
@@ -50,33 +39,9 @@ public class PinjieService implements StreamRequestHandler {
      */
     private static final String VIDEO_LINK =
             "ffmpeg -f concat -safe 0 -protocol_whitelist \"file,http,https,tcp,tls\" -i %s -filter_complex '[0:v]pad=0:0:0:0[vout]' -map [vout] -filter_complex \"[0:a]volume=volume=0[aout]\" -map [aout] %s";
-    /**
-     * 添加背景声, %1$s bg.MP3文件 %2$s 输出的视频文件
-     *
-     * <p>tmp视频文件(由于是在aliyun函数计算环境中,目录只能为<code>/tmp</code>下面):
-     *
-     * <pre>
-     * /tmp/temp.mp4
-     * </pre>
-     *
-     * <p>MP3文件(由于是在aliyun函数计算环境中,目录只能为<code>/tmp</code>下面):
-     *
-     * <pre>
-     * /tmp/music.mp3
-     * </pre>
-     *
-     * <p>输出视频文件(由于是在aliyun函数计算环境中,目录只能为<code>/tmp</code>下面):
-     *
-     * <pre>
-     * /tmp/out.mp4
-     * </pre>
-     */
-    private static final String ADD_BG_MUSIC_TO_VIDEO =
-            "ffmpeg -i %s -f lavfi -i amovie='%s':loop=55 -filter_complex amix=inputs=2:duration=first %s";
 
     @Override
-    public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context)
-            throws IOException {
+    public JSONObject process(JSONObject paramBody, FunctionComputeLogger logger) {
         final JSONObject outBody = new JSONObject();
         outBody.put("success", true);
 
@@ -85,7 +50,6 @@ public class PinjieService implements StreamRequestHandler {
         String outfileName = "";
         try {
             // 获取参数,并转为json格式
-            JSONObject paramBody = FCUtils.inputStream2JsonObject(inputStream);
             paramBody.put("note", "msg from service-pinjie");
             // JSONObject paramBody = getTestParam();
             fileName = MD5.md5(paramBody.toJSONString());
@@ -124,8 +88,10 @@ public class PinjieService implements StreamRequestHandler {
 
             // 生成连接视频
             String videoLinkCmd = String.format(VIDEO_LINK, listfileName, tempfileName);
+            outBody.put("videoLinkCmd", videoLinkCmd);
             String step2 = FfmpegUtil.shellWithOutput(videoLinkCmd);
             outBody.put("step2", step2);
+            logger.info("Pinjie step2: " + step2);
 
             // 第二步,为视频加背景音乐
             String musicObjKey = FCUtils.getOssObjectKey(music, "mp3");
@@ -140,9 +106,11 @@ public class PinjieService implements StreamRequestHandler {
                                     bgMusicFilePath,
                                     outVideoPath));
             outBody.put("step3", step3);
+            logger.info("Pinjie step3: " + step3);
 
             String lstmp = FfmpegUtil.shellWithOutput("ls /tmp/");
             outBody.put("lstmp", lstmp);
+            logger.info("Pinjie ls /tmp: " + lstmp);
             // 第三步, 将生成的视频上传至OSS并获取对应url地址
             File file = new File(outVideoPath);
             // outBody = tempfileName + ": " + file.exists();
@@ -150,6 +118,10 @@ public class PinjieService implements StreamRequestHandler {
             PutObjectResult objectResult =
                     ossClient.putObject(OSSUtil.BUCKET_NAME, objKey = (outfileName + ".mp4"), file);
             outBody.put("step4", objectResult.getRequestId());
+            logger.info("Pinjie step4: " + objectResult.getRequestId());
+        } catch (Exception e) {
+            outBody.put("success", false);
+            outBody.put("srv_err_message", FCUtils.getStackTrace(e));
         } finally {
             try {
                 if (null != ossClient) ossClient.shutdown();
@@ -164,10 +136,10 @@ public class PinjieService implements StreamRequestHandler {
                 }
             } catch (Exception e) {
                 outBody.put("success", false);
-                outBody.put("err_message_final", FCUtils.getStackTrace(e));
+                outBody.put("srv_err_message_final", FCUtils.getStackTrace(e));
             }
         }
 
-        outputStream.write(outBody.toJSONString().getBytes());
+        return outBody;
     }
 }
