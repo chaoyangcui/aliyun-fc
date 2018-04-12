@@ -80,7 +80,9 @@ public class APIGateway implements StreamRequestHandler {
             String music = paramBody.getString("mp3");
             if (isBlank(music)) throw new Exception("参数 'mp3' 是必须的!");
             JSONArray videos = paramBody.getJSONArray("mp4");
-            if (videos.size() < 1) throw new Exception("至少需要一个视频地址!");
+            if (videos.size() < 1 || videos.size() > 4) {
+                throw new Exception("视频地址参数应该在[1,4]个之间!");
+            }
 
             // JSONObject paramBody = FCUtils.getTestParam();
             final String fileName = MD5.md5(paramBody.toJSONString());
