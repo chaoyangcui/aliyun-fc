@@ -1,6 +1,7 @@
 package utils;
 
 import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 
 import fmpeg.HechengService.Position;
 
@@ -75,10 +76,11 @@ public class FfmpegUtil {
         return command;
     }
 
-    public static String getHechengCommand(String bgPicUrl, String tmpfilePath, String... videos) {
+    public static String getHechengCommand(JSONObject jsonObject, String bgPicUrl, String tmpfilePath, String... videos) {
         if (videos == null) {
             return "";
         }
+        Position position = Position.buildPosition(jsonObject);
         int len = videos.length;
         StringBuilder commandBuilder = new StringBuilder();
         commandBuilder.append(String.format("ffmpeg -i \"%s\" ", bgPicUrl));
@@ -92,27 +94,27 @@ public class FfmpegUtil {
             commandBuilder.append(
                     String.format(
                             "[1:v]scale=w=%s:h=%s[l1one];[joinpoint0][l1one]overlay=x=0:y=0 ",
-                            Position.width, Position.height));
+                            position.width, position.height));
         } else {
             for (int i = 1; i <= len; i++) {
                 String x = "0", y = "0";
                 switch (i) {
-                    case 1:x = Position.x1;y = Position.y1;break;
-                    case 2:x = Position.x2;y = Position.y2;break;
-                    case 3:x = Position.x3;y = Position.y3;break;
-                    case 4:x = Position.x4;y = Position.y4;break;
+                    case 1:x = position.x1;y = position.y1;break;
+                    case 2:x = position.x2;y = position.y2;break;
+                    case 3:x = position.x3;y = position.y3;break;
+                    case 4:x = position.x4;y = position.y4;break;
                     default:break;
                 }
                 if (i == len) { // 最后一个filter
                     commandBuilder.append(
                             String.format(
                                     "[%1$d:v]scale=w=%5$s:h=%6$s[l1%1$d];[joinpoint%2$d][l1%1$d]overlay=x=%3$s:y=%4$s ",
-                                    i, i - 1, x, y, Position.width, Position.height));
+                                    i, i - 1, x, y, position.width, position.height));
                 } else {
                     commandBuilder.append(
                             String.format(
                                     "[%1$d:v]scale=w=%5$s:h=%6$s[l1%1$d];[joinpoint%2$d][l1%1$d]overlay=x=%3$s:y=%4$s[joinpoint%1$d]; ",
-                                    i, i - 1, x, y, Position.width, Position.height));
+                                    i, i - 1, x, y, position.width, position.height));
                 }
             }
         }

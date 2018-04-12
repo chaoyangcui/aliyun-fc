@@ -1,3 +1,5 @@
+import com.alibaba.fastjson.JSONObject;
+
 import utils.FfmpegUtil;
 
 import java.io.BufferedReader;
@@ -13,14 +15,20 @@ import java.io.InputStreamReader;
 public class HechengTest {
     public static void main(String[] args) {
         // String command1 =
-        //         "ffmpeg -f concat -safe 0 -protocol_whitelist \"file,http,https,tcp,tls\" -i list.txt -filter_complex \"[0:v]pad=0:0:0:0[vout]\" -map [vout] -filter_complex \"[0:a]volume=volume=0[aout]\" -map [aout] temp.mp4";
+        //         "ffmpeg -f concat -safe 0 -protocol_whitelist \"file,http,https,tcp,tls\" -i
+        // list.txt -filter_complex \"[0:v]pad=0:0:0:0[vout]\" -map [vout] -filter_complex
+        // \"[0:a]volume=volume=0[aout]\" -map [aout] temp.mp4";
         // System.out.println(shellWithOutput(command1));
         // String command = generateHechengCommand(args);
         // String output = shellWithOutput(command);
         // System.out.println(output);
 
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("xGap", 20);
+        jsonObject.put("yGap", 20);
         String hecheng =
                 FfmpegUtil.getHechengCommand(
+                        jsonObject,
                         "https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/111.png",
                         "sssssss.mp4",
                         "https://iccfgtest0001.oss-cn-shanghai.aliyuncs.com/mygirl2.mp4",

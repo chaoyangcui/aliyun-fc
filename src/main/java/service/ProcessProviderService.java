@@ -8,6 +8,7 @@ import com.aliyun.fc.runtime.StreamRequestHandler;
 import fmpeg.FfmpegService;
 import fmpeg.FfmpegService.ProcessType;
 import utils.FCUtils;
+import utils.FfmpegUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,6 +42,10 @@ public class ProcessProviderService implements StreamRequestHandler {
             JSONObject paramBody = FCUtils.inputStream2JsonObject(inputStream);
             logger.info("Service Param:" + paramBody.toJSONString());
             outBody.put("ServiceParam", paramBody.toJSONString());
+            boolean clean = paramBody.getBooleanValue("clean");
+            if (clean) {
+                FfmpegUtil.shellWithOutput("rm -rf /tmp/*.mp3 /tmp/*.mp4");
+            }
             int processType = paramBody.getIntValue("processType");
             JSONObject processOut;
             FfmpegService ffmpegService;

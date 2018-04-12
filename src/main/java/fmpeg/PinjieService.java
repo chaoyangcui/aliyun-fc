@@ -72,13 +72,6 @@ public class PinjieService implements FfmpegService {
             // 视频,背景音乐参数
             final String music = paramBody.getString("mp3");
             final JSONArray videos = paramBody.getJSONArray("mp4");
-            Object cleanObj = paramBody.get("clean");
-            if (cleanObj != null) {
-                boolean clean = Boolean.parseBoolean(cleanObj.toString());
-                if (clean) {
-                    FfmpegUtil.shellWithOutput("rm -rf /tmp/*.mp3 /tmp/*.mp4");
-                }
-            }
 
             ossClient = OSSUtil.getOSSClient();
             // 第一步,连接视频

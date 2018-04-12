@@ -13,6 +13,8 @@ import utils.OSSUtil;
 
 import java.io.File;
 
+import static utils.FCUtils.isBlank;
+
 /**
  * 视频合成
  * @author Eric
@@ -54,20 +56,20 @@ public class HechengService implements FfmpegService {
             // 视频,背景音乐参数
             final String music = paramBody.getString("mp3");
             final JSONArray videos = paramBody.getJSONArray("mp4");
-            Object cleanObj = paramBody.get("clean");
-            if (cleanObj != null) {
-                boolean clean = Boolean.parseBoolean(cleanObj.toString());
-                if (clean) {
-                    FfmpegUtil.shellWithOutput("rm -rf /tmp/*.mp3 /tmp/*.mp4");
-                }
+            Object positionObj = paramBody.get("position");
+            JSONObject position = new JSONObject();
+            if (positionObj != null) {
+                position = paramBody.getJSONObject("position");
             }
+            String bgUrl = paramBody.getString("bgUrl");
+            bgUrl = isBlank(bgUrl) ? bgPicUrl : bgUrl;
 
             ossClient = OSSUtil.getOSSClient();
             // 第一步,合成视频
             // 生成合成视频命令
             String command =
                     FfmpegUtil.getHechengCommand(
-                            bgPicUrl, tempfileName, videos.toArray(new String[0]));
+                            position, bgUrl, tempfileName, videos.toArray(new String[0]));
             outBody.put("step1", "第一步,合成命令");
             outBody.put("command", command);
             logger.info("Hecheng Command: " + command);
@@ -135,15 +137,51 @@ public class HechengService implements FfmpegService {
     public static class Position {
         public static String W = "750";
         public static String H = "1448";
-        public static String width = "370";
-        public static String height = "510";
-        static String top = "270";
-        static String xGap = "5";
-        static String yGap = "5";
-        public static String x1 = "0", x3 = "0", y1 = top, y2 = top;
-        public static String x2 = width + "+" + xGap;
-        public static String y3 = "overlay_h+" + yGap + "+" + top;
-        public static String x4 = "overlay_w+" + xGap;
-        public static String y4 = "overlay_h+" + yGap + "+" + top;
+        public String width = "370";
+        public String height = "510";
+        String top = "150";
+        String xGap = "5";
+        String yGap = "5";
+        public String x1 = "0", x3 = "0", y1 = top, y2 = top;
+        public String x2 = width + "+" + xGap;
+        public String y3 = "overlay_h+" + yGap + "+" + top;
+        public String x4 = "overlay_w+" + xGap;
+        public String y4 = "overlay_h+" + yGap + "+" + top;
+
+        public static Position buildPosition(JSONObject jsonObject) {
+            Position position = new Position();
+            position.width =
+                    isBlank(jsonObject.getString("width"))
+                            ? position.width
+                            : jsonObject.getString("width");
+            position.height =
+                    isBlank(jsonObject.getString("height"))
+                            ? position.height
+                            : jsonObject.getString("height");
+            position.top =
+                    isBlank(jsonObject.getString("top"))
+                            ? position.top
+                            : jsonObject.getString("top");
+            position.xGap =
+                    isBlank(jsonObject.getString("xGap"))
+                            ? position.xGap
+                            : jsonObject.getString("xGap");
+            position.yGap =
+                    isBlank(jsonObject.getString("yGap"))
+                            ? position.yGap
+                            : jsonObject.getString("yGap");
+
+            position.x1 = "0";
+            position.x3 = "0";
+            position.y1 = position.top;
+            position.y2 = position.top;
+            position.x2 = position.width + "+" + position.xGap;
+            position.y3 = "overlay_h+" + position.yGap + "+" + position.top;
+            position.x4 = "overlay_w+" + position.xGap;
+            position.y4 = "overlay_h+" + position.yGap + "+" + position.top;
+
+            return position;
+        }
+
     }
 }

@@ -1,5 +1,6 @@
 package fcapi;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
 import com.aliyun.fc.runtime.Context;
@@ -12,6 +13,8 @@ import utils.MD5;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import static utils.FCUtils.isBlank;
 
 /**
  * 视频处理网关入口
@@ -65,9 +68,20 @@ public class APIGateway implements StreamRequestHandler {
             throws IOException {
         final JSONObject outBody = new JSONObject();
         outBody.put("success", true);
+        boolean detailErr = false;
         try {
             // 获取参数,并转为json格式
             JSONObject paramBody = FCUtils.getInBodyParam(inputStream);
+            detailErr = paramBody.getBooleanValue("detailErr");
+
+            // 参数验证
+            int processType = paramBody.getIntValue("processType");
+            if (processType == 0) throw new Exception("参数 'processType' 是必须的!");
+            String music = paramBody.getString("mp3");
+            if (isBlank(music)) throw new Exception("参数 'mp3' 是必须的!");
+            JSONArray videos = paramBody.getJSONArray("mp4");
+            if (videos.size() < 1) throw new Exception("至少需要一个视频地址!");
+
             // JSONObject paramBody = FCUtils.getTestParam();
             final String fileName = MD5.md5(paramBody.toJSONString());
 
@@ -83,7 +97,8 @@ public class APIGateway implements StreamRequestHandler {
             // outBody.put("funResult", response.getHeader());
         } catch (Exception e) {
             outBody.put("success", false);
-            outBody.put("err_message", FCUtils.getStackTrace(e));
+            outBody.put("err_message", e.getMessage());
+            if (detailErr) outBody.put("err_detail", FCUtils.getStackTrace(e));
         }
 
         outputStream.write(FCUtils.fmtOutput(outBody.toJSONString()).getBytes());
